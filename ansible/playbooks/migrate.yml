@@ -1,0 +1,10 @@
+---
+- name: Migrate Site
+  hosts: frappe
+  gather_facts: no
+
+  tasks:
+    - name: Run migration
+      shell: |
+        cd ~/frappe-bench
+        bench --site apnacollege.test migrate

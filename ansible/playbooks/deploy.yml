@@ -1,0 +1,13 @@
+---
+- name: Test Frappe Server Connection
+  hosts: frappe
+  gather_facts: no
+
+  tasks:
+    - name: Check current user
+      command: whoami
+      register: whoami_output
+
+    - name: Show current user
+      debug:
+        var: whoami_output.stdout

@@ -1,0 +1,15 @@
+---
+- name: Pull latest code
+  shell: |
+    cd ~/frappe-bench/apps/college_management
+    git pull origin develop
+
+- name: Run migration
+  shell: |
+    cd ~/frappe-bench
+    bench --site apnacollege.test migrate
+
+- name: Clear cache
+  shell: |
+    cd ~/frappe-bench
+    bench --site apnacollege.test clear-cache

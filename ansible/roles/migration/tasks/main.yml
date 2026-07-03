@@ -1,0 +1,5 @@
+---
+- name: Run migration
+  shell: |
+    cd ~/frappe-bench
+    bench --site apnacollege.test migrate
