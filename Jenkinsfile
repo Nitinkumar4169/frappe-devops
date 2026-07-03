@@ -2,9 +2,19 @@ pipeline {
     agent any
 
     stages {
-        stage('Test') {
+
+        stage('Checkout') {
             steps {
-                echo 'Jenkins is connected successfully!'
+                checkout scm
+            }
+        }
+
+        stage('Ansible Deploy') {
+            steps {
+                sh '''
+                cd ansible
+                ansible-playbook playbooks/deploy_app.yml
+                '''
             }
         }
     }
