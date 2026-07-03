@@ -9,7 +9,7 @@ pipeline {
             }
         }
 
-        stage('Ansible Deploy') {
+        stage('Deploy') {
             steps {
                 sh '''
                 cd ansible
