@@ -3,8 +3,5 @@
   hosts: frappe
   gather_facts: no
 
-  tasks:
-    - name: Backup apnacollege.test
-      shell: |
-        cd ~/frappe-bench
-        bench --site apnacollege.test backup
+  roles:
+    - backup

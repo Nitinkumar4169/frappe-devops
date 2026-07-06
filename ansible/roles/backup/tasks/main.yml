@@ -1,0 +1,5 @@
+---
+- name: Backup site
+  shell: |
+    cd ~/frappe-bench
+    bench --site apnacollege.test backup

@@ -1,0 +1,5 @@
+---
+- name: Check Frappe Health
+  shell: |
+    cd ~/frappe-bench
+    bench doctor
