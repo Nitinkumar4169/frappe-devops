@@ -1,0 +1,2 @@
+mariadb_root_password: CHANGE_ME
+bench_path: /home/frappe-user/frappe-bench
