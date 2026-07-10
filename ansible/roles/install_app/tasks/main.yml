@@ -1,0 +1,35 @@
+---
+- name: Check if site exists
+  stat:
+    path: "/home/frappe-user/frappe-bench/sites/{{ site_name }}"
+  register: site_check
+
+- name: Fail if site does not exist
+  fail:
+    msg: "Site {{ site_name }} does not exist"
+  when: not site_check.stat.exists
+
+- name: Get installed apps
+  command:
+    cmd: bench --site {{ site_name }} list-apps
+    chdir: /home/frappe-user/frappe-bench
+  register: installed_apps
+  changed_when: false
+
+- name: Install app
+  command:
+    cmd: >
+      bench --site {{ site_name }}
+      install-app {{ app_name }}
+    chdir: /home/frappe-user/frappe-bench
+  when: app_name not in installed_apps.stdout
+
+- name: Success message
+  debug:
+    msg: "App {{ app_name }} installed successfully"
+  when: app_name not in installed_apps.stdout
+
+- name: Already installed message
+  debug:
+    msg: "App {{ app_name }} already exists on {{ site_name }}"
+  when: app_name in installed_apps.stdout

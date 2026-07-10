@@ -1,0 +1,44 @@
+---
+- name: Check if backup file exists
+  stat:
+    path: "{{ backup_file }}"
+  register: backup_check
+
+- name: Fail if backup missing
+  fail:
+    msg: "Backup file not found: {{ backup_file }}"
+  when: not backup_check.stat.exists
+
+- name: Check if site exists
+  stat:
+    path: "/home/frappe-user/frappe-bench/sites/{{ site_name }}"
+  register: site_check
+
+- name: Create site if missing
+  command:
+    cmd: >
+      bench new-site {{ site_name }}
+      --admin-password admin
+      --mariadb-root-password {{ mariadb_root_password }}
+    chdir: /home/frappe-user/frappe-bench
+  when: not site_check.stat.exists
+
+- name: Restore database
+  command:
+    cmd: >
+      bench --site {{ site_name }}
+      restore {{ backup_file }}
+      --mariadb-root-password {{ mariadb_root_password }}
+    chdir: /home/frappe-user/frappe-bench
+  register: restore_result
+
+- name: Run migrate
+  command:
+    cmd: >
+      bench --site {{ site_name }} migrate
+    chdir: /home/frappe-user/frappe-bench
+  when: restore_result.rc == 0
+
+- name: Success message
+  debug:
+    msg: "Site {{ site_name }} restored successfully"

@@ -1,5 +1,13 @@
----
-- name: Backup site
+- name: Take Backup
+  command:
+    cmd: >
+      bench --site {{ site_name }} backup
+    chdir: /home/frappe-user/frappe-bench
+
+- name: Get Latest Backup
   shell: |
-    cd ~/frappe-bench
-    bench --site apnacollege.test backup
+    ls -t /home/frappe-user/frappe-bench/sites/{{ site_name }}/private/backups | head -1
+  register: latest_backup
+
+- debug:
+    msg: "Latest backup file: {{ latest_backup.stdout }}"

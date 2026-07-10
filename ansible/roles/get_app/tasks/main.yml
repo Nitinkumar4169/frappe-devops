@@ -1,0 +1,56 @@
+---
+- name: Validate required variables
+  fail:
+    msg: "Both app_name and repo_url are required"
+  when: app_name is not defined or repo_url is not defined
+
+- name: Check if app already exists
+  stat:
+    path: "{{ bench_path }}/apps/{{ app_name }}"
+  register: app_check
+
+- name: Get Bench Version
+  command:
+    cmd: bench version
+    chdir: "{{ bench_path }}"
+  register: bench_version
+  changed_when: false
+
+- name: Show Installed Apps and Versions
+  debug:
+    var: bench_version.stdout_lines
+
+- name: Download App from Repository
+  command:
+    cmd: >
+      bench get-app
+      {{ repo_url }}
+      {% if branch is defined %}
+      --branch {{ branch }}
+      {% endif %}
+    chdir: "{{ bench_path }}"
+  register: get_app_result
+  when: not app_check.stat.exists
+
+- name: Verify App Downloaded
+  stat:
+    path: "{{ bench_path }}/apps/{{ app_name }}"
+  register: verify_app
+
+- name: Fail if App Download Failed
+  fail:
+    msg: "Failed to download app {{ app_name }}"
+  when:
+    - not verify_app.stat.exists
+
+- name: App Download Success
+  debug:
+    msg: "App {{ app_name }} downloaded successfully"
+  when:
+    - verify_app.stat.exists
+    - not app_check.stat.exists
+
+- name: App Already Exists
+  debug:
+    msg: "App {{ app_name }} already exists in bench"
+  when: app_check.stat.exists

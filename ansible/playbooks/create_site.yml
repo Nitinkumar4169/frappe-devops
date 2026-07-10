@@ -1,0 +1,6 @@
+---
+- hosts: frappe
+  become: no
+
+  roles:
+    - create_site

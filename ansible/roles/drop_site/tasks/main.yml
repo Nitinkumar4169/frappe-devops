@@ -1,0 +1,28 @@
+---
+- name: Check if site exists
+  stat:
+    path: "{{ bench_path }}/sites/{{ site_name }}"
+  register: site_check
+
+- name: Fail if site does not exist
+  fail:
+    msg: "Site {{ site_name }} does not exist"
+  when: not site_check.stat.exists
+
+- name: Backup site before deletion
+  command:
+    cmd: >
+      bench --site {{ site_name }} backup
+    chdir: "{{ bench_path }}"
+
+- name: Drop site
+  command:
+    cmd: >
+      bench drop-site {{ site_name }}
+      --root-password {{ mariadb_root_password }}
+      --force
+    chdir: "{{ bench_path }}"
+
+- name: Success message
+  debug:
+    msg: "Site {{ site_name }} deleted successfully"
