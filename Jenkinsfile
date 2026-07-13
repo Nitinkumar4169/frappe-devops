@@ -76,7 +76,9 @@ pipeline {
                 sh """
                 cd ansible
 
-                ansible-playbook playbooks/${ACTION}.yml \
+                ansible-playbook \
+                 -i inventory.ini \
+                 playbooks/${ACTION}.yml \
                 -e site_name='${SITE_NAME}' \
                 -e app_name='${APP_NAME}' \
                 -e repo_url='${REPO_URL}' \
