@@ -1,15 +1,66 @@
 ---
-- name: Pull latest code
-  shell: |
-    cd ~/frappe-bench/apps/college_management
-    git pull origin develop
+- name: Validate required variables
+  fail:
+    msg: "site_name, app_name and branch are required"
+  when:
+    - site_name is not defined or site_name | length == 0
+    - app_name is not defined or app_name | length == 0
+    - branch is not defined or branch | length == 0
 
-- name: Run migration
-  shell: |
-    cd ~/frappe-bench
-    bench --site apnacollege.test migrate
+- name: Check if site exists
+  stat:
+    path: "{{ bench_path }}/sites/{{ site_name }}"
+  register: site_check
 
-- name: Clear cache
-  shell: |
-    cd ~/frappe-bench
-    bench --site apnacollege.test clear-cache
+- name: Fail if site does not exist
+  fail:
+    msg: "Site {{ site_name }} does not exist"
+  when: not site_check.stat.exists
+
+- name: Check if app exists
+  stat:
+    path: "{{ bench_path }}/apps/{{ app_name }}"
+  register: app_check
+
+- name: Fail if app does not exist
+  fail:
+    msg: "App {{ app_name }} not found in bench"
+  when: not app_check.stat.exists
+
+- name: Pull Latest Code
+  command:
+    cmd: git pull origin {{ branch }}
+    chdir: "{{ bench_path }}/apps/{{ app_name }}"
+  register: git_pull_result
+
+- name: Show Git Pull Output
+  debug:
+    var: git_pull_result.stdout_lines
+
+- name: Run Migration
+  command:
+    cmd: >
+      bench --site {{ site_name }} migrate
+    chdir: "{{ bench_path }}"
+  register: migrate_result
+
+- name: Clear Cache
+  command:
+    cmd: >
+      bench --site {{ site_name }} clear-cache
+    chdir: "{{ bench_path }}"
+  when: migrate_result.rc == 0
+
+- name: Build Assets
+  command:
+    cmd: bench build
+    chdir: "{{ bench_path }}"
+  register: build_result
+
+- name: Deployment Success
+  debug:
+    msg:
+      - "Application deployed successfully"
+      - "App: {{ app_name }}"
+      - "Site: {{ site_name }}"
+      - "Branch: {{ branch }}"

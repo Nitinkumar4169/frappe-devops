@@ -1,7 +1,14 @@
 ---
+- name: Validate required variables
+  fail:
+    msg: "Both site_name and app_name are required"
+  when:
+    - site_name is not defined or site_name | length == 0
+    - app_name is not defined or app_name | length == 0
+
 - name: Check if site exists
   stat:
-    path: "/home/frappe-user/frappe-bench/sites/{{ site_name }}"
+    path: "{{ bench_path }}/sites/{{ site_name }}"
   register: site_check
 
 - name: Fail if site does not exist
@@ -12,24 +19,43 @@
 - name: Get installed apps
   command:
     cmd: bench --site {{ site_name }} list-apps
-    chdir: /home/frappe-user/frappe-bench
+    chdir: "{{ bench_path }}"
   register: installed_apps
   changed_when: false
+
+- name: Show installed apps
+  debug:
+    var: installed_apps.stdout_lines
 
 - name: Install app
   command:
     cmd: >
       bench --site {{ site_name }}
       install-app {{ app_name }}
-    chdir: /home/frappe-user/frappe-bench
+    chdir: "{{ bench_path }}"
+  register: install_result
   when: app_name not in installed_apps.stdout
 
-- name: Success message
+- name: Verify app installed
+  command:
+    cmd: bench --site {{ site_name }} list-apps
+    chdir: "{{ bench_path }}"
+  register: verify_apps
+  changed_when: false
+
+- name: Fail if app installation failed
+  fail:
+    msg: "App {{ app_name }} installation failed on {{ site_name }}"
+  when: app_name not in verify_apps.stdout
+
+- name: App installation success
   debug:
-    msg: "App {{ app_name }} installed successfully"
-  when: app_name not in installed_apps.stdout
+    msg: "App {{ app_name }} installed successfully on {{ site_name }}"
+  when:
+    - app_name in verify_apps.stdout
+    - app_name not in installed_apps.stdout
 
-- name: Already installed message
+- name: App already installed
   debug:
     msg: "App {{ app_name }} already exists on {{ site_name }}"
   when: app_name in installed_apps.stdout

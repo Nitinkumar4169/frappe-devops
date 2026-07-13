@@ -1,5 +1,56 @@
 ---
-- name: Check Frappe Health
-  shell: |
-    cd ~/frappe-bench
-    bench doctor
+- name: Validate required variables
+  fail:
+    msg: "site_name is required"
+  when:
+    - site_name is not defined or site_name | length == 0
+
+- name: Check if site exists
+  stat:
+    path: "{{ bench_path }}/sites/{{ site_name }}"
+  register: site_check
+
+- name: Fail if site does not exist
+  fail:
+    msg: "Site {{ site_name }} does not exist"
+  when: not site_check.stat.exists
+
+- name: Run Bench Doctor
+  command:
+    cmd: bench doctor
+    chdir: "{{ bench_path }}"
+  register: doctor_result
+  changed_when: false
+
+- name: Show Bench Doctor Output
+  debug:
+    var: doctor_result.stdout_lines
+
+- name: Check Scheduler Status
+  command:
+    cmd: bench --site {{ site_name }} scheduler status
+    chdir: "{{ bench_path }}"
+  register: scheduler_status
+  changed_when: false
+
+- name: Show Scheduler Status
+  debug:
+    var: scheduler_status.stdout_lines
+
+- name: Check Site Configuration
+  stat:
+    path: "{{ bench_path }}/sites/{{ site_name }}/site_config.json"
+  register: config_check
+
+- name: Fail if site_config.json missing
+  fail:
+    msg: "site_config.json missing for {{ site_name }}"
+  when: not config_check.stat.exists
+
+- name: Health Check Success
+  debug:
+    msg:
+      - "Health Check Completed Successfully"
+      - "Site: {{ site_name }}"
+      - "Scheduler Status Verified"
+      - "Site Configuration Verified"

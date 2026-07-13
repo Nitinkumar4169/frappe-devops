@@ -1,17 +1,46 @@
 ---
-- name: Check if backup file exists
-  stat:
-    path: "{{ backup_file }}"
-  register: backup_check
-
-- name: Fail if backup missing
+- name: Validate required variables
   fail:
-    msg: "Backup file not found: {{ backup_file }}"
-  when: not backup_check.stat.exists
+    msg: "site_name, db_backup, public_backup and private_backup are required"
+  when:
+    - site_name is not defined or site_name | length == 0
+    - db_backup is not defined or db_backup | length == 0
+    - public_backup is not defined or public_backup | length == 0
+    - private_backup is not defined or private_backup | length == 0
+
+- name: Check database backup exists
+  stat:
+    path: "{{ db_backup }}"
+  register: db_backup_check
+
+- name: Fail if database backup missing
+  fail:
+    msg: "Database backup not found: {{ db_backup }}"
+  when: not db_backup_check.stat.exists
+
+- name: Check public files backup exists
+  stat:
+    path: "{{ public_backup }}"
+  register: public_backup_check
+
+- name: Fail if public backup missing
+  fail:
+    msg: "Public backup not found: {{ public_backup }}"
+  when: not public_backup_check.stat.exists
+
+- name: Check private files backup exists
+  stat:
+    path: "{{ private_backup }}"
+  register: private_backup_check
+
+- name: Fail if private backup missing
+  fail:
+    msg: "Private backup not found: {{ private_backup }}"
+  when: not private_backup_check.stat.exists
 
 - name: Check if site exists
   stat:
-    path: "/home/frappe-user/frappe-bench/sites/{{ site_name }}"
+    path: "{{ bench_path }}/sites/{{ site_name }}"
   register: site_check
 
 - name: Create site if missing
@@ -20,25 +49,40 @@
       bench new-site {{ site_name }}
       --admin-password admin
       --mariadb-root-password {{ mariadb_root_password }}
-    chdir: /home/frappe-user/frappe-bench
+    chdir: "{{ bench_path }}"
   when: not site_check.stat.exists
 
-- name: Restore database
+- name: Restore Site
   command:
     cmd: >
       bench --site {{ site_name }}
-      restore {{ backup_file }}
-      --mariadb-root-password {{ mariadb_root_password }}
-    chdir: /home/frappe-user/frappe-bench
+      restore {{ db_backup }}
+      --with-public-files {{ public_backup }}
+      --with-private-files {{ private_backup }}
+      --db-root-password {{ mariadb_root_password }}
+      --force
+    chdir: "{{ bench_path }}"
   register: restore_result
 
-- name: Run migrate
+- name: Run Migration
   command:
     cmd: >
       bench --site {{ site_name }} migrate
-    chdir: /home/frappe-user/frappe-bench
+    chdir: "{{ bench_path }}"
   when: restore_result.rc == 0
 
-- name: Success message
+- name: Clear Cache
+  command:
+    cmd: >
+      bench --site {{ site_name }} clear-cache
+    chdir: "{{ bench_path }}"
+  when: restore_result.rc == 0
+
+- name: Success Message
   debug:
-    msg: "Site {{ site_name }} restored successfully"
+    msg:
+      - "Site restored successfully"
+      - "Site: {{ site_name }}"
+      - "Database: {{ db_backup }}"
+      - "Public Files: {{ public_backup }}"
+      - "Private Files: {{ private_backup }}"

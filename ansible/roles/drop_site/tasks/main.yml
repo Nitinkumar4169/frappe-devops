@@ -1,4 +1,10 @@
 ---
+- name: Validate required variables
+  fail:
+    msg: "site_name is required"
+  when:
+    - site_name is not defined or site_name | length == 0
+
 - name: Check if site exists
   stat:
     path: "{{ bench_path }}/sites/{{ site_name }}"
@@ -9,20 +15,45 @@
     msg: "Site {{ site_name }} does not exist"
   when: not site_check.stat.exists
 
-- name: Backup site before deletion
+- name: Take Backup Before Deletion
   command:
     cmd: >
       bench --site {{ site_name }} backup
     chdir: "{{ bench_path }}"
+  register: backup_result
 
-- name: Drop site
+- name: Get Latest Backup
+  shell: |
+    ls -t {{ bench_path }}/sites/{{ site_name }}/private/backups/*database.sql.gz | head -1
+  register: latest_backup
+  changed_when: false
+
+- name: Show Backup Information
+  debug:
+    msg: "Backup created: {{ latest_backup.stdout }}"
+
+- name: Drop Site
   command:
     cmd: >
       bench drop-site {{ site_name }}
       --root-password {{ mariadb_root_password }}
       --force
     chdir: "{{ bench_path }}"
+  register: drop_result
 
-- name: Success message
+- name: Verify Site Removal
+  stat:
+    path: "{{ bench_path }}/sites/{{ site_name }}"
+  register: verify_site
+
+- name: Fail if Site Still Exists
+  fail:
+    msg: "Site {{ site_name }} still exists after drop operation"
+  when: verify_site.stat.exists
+
+- name: Site Deletion Success
   debug:
-    msg: "Site {{ site_name }} deleted successfully"
+    msg:
+      - "Site deleted successfully"
+      - "Site: {{ site_name }}"
+      - "Backup: {{ latest_backup.stdout }}"

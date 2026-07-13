@@ -1,5 +1,38 @@
 ---
-- name: Run migration
-  shell: |
-    cd ~/frappe-bench
-    bench --site apnacollege.test migrate
+- name: Validate required variables
+  fail:
+    msg: "site_name is required"
+  when:
+    - site_name is not defined or site_name | length == 0
+
+- name: Check if site exists
+  stat:
+    path: "{{ bench_path }}/sites/{{ site_name }}"
+  register: site_check
+
+- name: Fail if site does not exist
+  fail:
+    msg: "Site {{ site_name }} does not exist"
+  when: not site_check.stat.exists
+
+- name: Run Migration
+  command:
+    cmd: >
+      bench --site {{ site_name }} migrate
+    chdir: "{{ bench_path }}"
+  register: migrate_result
+
+- name: Show Migration Output
+  debug:
+    var: migrate_result.stdout_lines
+
+- name: Clear Cache
+  command:
+    cmd: >
+      bench --site {{ site_name }} clear-cache
+    chdir: "{{ bench_path }}"
+  when: migrate_result.rc == 0
+
+- name: Migration Success
+  debug:
+    msg: "Migration completed successfully for {{ site_name }}"

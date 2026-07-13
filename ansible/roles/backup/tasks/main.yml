@@ -1,13 +1,52 @@
+---
+- name: Validate required variables
+  fail:
+    msg: "site_name is required"
+  when:
+    - site_name is not defined or site_name | length == 0
+
+- name: Check if site exists
+  stat:
+    path: "{{ bench_path }}/sites/{{ site_name }}"
+  register: site_check
+
+- name: Fail if site does not exist
+  fail:
+    msg: "Site {{ site_name }} does not exist"
+  when: not site_check.stat.exists
+
 - name: Take Backup
   command:
     cmd: >
       bench --site {{ site_name }} backup
-    chdir: /home/frappe-user/frappe-bench
+    chdir: "{{ bench_path }}"
+  register: backup_result
 
-- name: Get Latest Backup
+- name: Get Latest Database Backup
   shell: |
-    ls -t /home/frappe-user/frappe-bench/sites/{{ site_name }}/private/backups | head -1
-  register: latest_backup
+    ls -t {{ bench_path }}/sites/{{ site_name }}/private/backups/*database.sql.gz | head -1
+  register: db_backup
+  changed_when: false
 
-- debug:
-    msg: "Latest backup file: {{ latest_backup.stdout }}"
+- name: Get Latest Public Files Backup
+  shell: |
+    ls -t {{ bench_path }}/sites/{{ site_name }}/private/backups/*files.tar | grep -v private | head -1
+  register: public_backup
+  changed_when: false
+
+- name: Get Latest Private Files Backup
+  shell: |
+    ls -t {{ bench_path }}/sites/{{ site_name }}/private/backups/*private-files.tar | head -1
+  register: private_backup
+  changed_when: false
+
+- name: Display Backup Information
+  debug:
+    msg:
+      - "Database Backup : {{ db_backup.stdout }}"
+      - "Public Backup   : {{ public_backup.stdout }}"
+      - "Private Backup  : {{ private_backup.stdout }}"
+
+- name: Backup Success
+  debug:
+    msg: "Backup completed successfully for {{ site_name }}"
