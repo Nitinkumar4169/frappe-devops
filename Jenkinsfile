@@ -77,6 +77,14 @@ pipeline {
                 checkout scm
             }
         }
+       stage('Set Build Name') {
+           steps {
+              script {
+                  currentBuild.displayName =
+                      "${params.ACTION}-${params.SITE_NAME}"
+              }
+           }
+        }
 
         stage('Run Ansible') {
             steps {
