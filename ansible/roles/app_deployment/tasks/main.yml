@@ -1,11 +1,24 @@
 ---
+# ==================================================
+# Validate Variables
+# ==================================================
+
 - name: Validate required variables
   fail:
-    msg: "site_name, app_name and branch are required"
-  when:
-    - site_name is not defined or site_name | length == 0
-    - app_name is not defined or app_name | length == 0
-    - branch is not defined or branch | length == 0
+    msg: "site_name, app_name, repo_url and branch are required"
+  when: >
+    site_name is not defined or
+    site_name | length == 0 or
+    app_name is not defined or
+    app_name | length == 0 or
+    repo_url is not defined or
+    repo_url | length == 0 or
+    branch is not defined or
+    branch | length == 0
+
+# ==================================================
+# Verify Site
+# ==================================================
 
 - name: Check if site exists
   stat:
@@ -17,50 +30,216 @@
     msg: "Site {{ site_name }} does not exist"
   when: not site_check.stat.exists
 
-- name: Check if app exists
+# ==================================================
+# Check App Exists
+# ==================================================
+
+- name: Check if app exists in bench
   stat:
     path: "{{ bench_path }}/apps/{{ app_name }}"
   register: app_check
 
-- name: Fail if app does not exist
-  fail:
-    msg: "App {{ app_name }} not found in bench"
+# ==================================================
+# Download App if Missing
+# ==================================================
+
+- name: Download app if missing
+  command:
+    cmd: >
+      bench get-app --branch {{ branch }}
+      {{ app_name }}
+      {{ repo_url }}
+    chdir: "{{ bench_path }}"
   when: not app_check.stat.exists
 
-- name: Pull Latest Code
-  command:
-    cmd: git pull origin {{ branch }}
-    chdir: "{{ bench_path }}/apps/{{ app_name }}"
-  register: git_pull_result
+- name: Verify app downloaded
+  stat:
+    path: "{{ bench_path }}/apps/{{ app_name }}"
+  register: app_check_after
 
-- name: Show Git Pull Output
+- name: Fail if app download failed
+  fail:
+    msg: "Failed to download app {{ app_name }}"
+  when: not app_check_after.stat.exists
+
+# ==================================================
+# Check Installed Apps
+# ==================================================
+
+- name: Get installed apps
+  command:
+    cmd: bench --site {{ site_name }} list-apps
+    chdir: "{{ bench_path }}"
+  register: installed_apps
+
+# ==================================================
+# Install App if Missing
+# ==================================================
+
+- name: Install app if not installed
+  command:
+    cmd: >
+      bench --site {{ site_name }}
+      install-app {{ app_name }}
+    chdir: "{{ bench_path }}"
+  when: app_name not in installed_apps.stdout
+
+# ==================================================
+# Backup Before Deployment
+# ==================================================
+
+- name: Backup site before deployment
+  command:
+    cmd: >
+      bench --site {{ site_name }}
+      backup
+    chdir: "{{ bench_path }}"
+  register: backup_result
+
+- name: Show backup result
   debug:
-    var: git_pull_result.stdout_lines
+    var: backup_result.stdout_lines
 
-- name: Run Migration
+# ==================================================
+# Save Current Commit
+# ==================================================
+
+- name: Save current git commit
+  command:
+    cmd: git rev-parse HEAD
+    chdir: "{{ bench_path }}/apps/{{ app_name }}"
+  register: current_commit
+
+- name: Show current commit
+  debug:
+    msg: "Current Commit: {{ current_commit.stdout }}"
+
+# ==================================================
+# Deployment Block
+# ==================================================
+
+- block:
+
+    # ----------------------------------------------
+    # Pull Latest Code
+    # ----------------------------------------------
+
+    - name: Pull latest code
+      command:
+        cmd: git pull origin {{ branch }}
+        chdir: "{{ bench_path }}/apps/{{ app_name }}"
+      register: git_pull_result
+
+    - name: Show git pull output
+      debug:
+        var: git_pull_result.stdout_lines
+
+    # ----------------------------------------------
+    # Migration
+    # ----------------------------------------------
+
+    - name: Run migration
+      command:
+        cmd: >
+          bench --site {{ site_name }}
+          migrate
+        chdir: "{{ bench_path }}"
+      register: migrate_result
+
+    - name: Show migration output
+      debug:
+        var: migrate_result.stdout_lines
+
+  rescue:
+
+    # ----------------------------------------------
+    # Rollback Git Commit
+    # ----------------------------------------------
+
+    - name: Rollback to previous commit
+      command:
+        cmd: git reset --hard {{ current_commit.stdout }}
+        chdir: "{{ bench_path }}/apps/{{ app_name }}"
+      register: rollback_result
+
+    - name: Show rollback output
+      debug:
+        var: rollback_result.stdout_lines
+
+    - fail:
+        msg:
+          - "Migration failed."
+          - "Application rolled back to previous commit."
+          - "Database backup is available for manual restore."
+
+# ==================================================
+# Clear Cache
+# ==================================================
+
+- name: Clear cache
   command:
     cmd: >
-      bench --site {{ site_name }} migrate
+      bench --site {{ site_name }}
+      clear-cache
     chdir: "{{ bench_path }}"
-  register: migrate_result
 
-- name: Clear Cache
+# ==================================================
+# Clear Website Cache
+# ==================================================
+
+- name: Clear website cache
   command:
     cmd: >
-      bench --site {{ site_name }} clear-cache
+      bench --site {{ site_name }}
+      clear-website-cache
     chdir: "{{ bench_path }}"
-  when: migrate_result.rc == 0
 
-- name: Build Assets
+# ==================================================
+# Build Assets
+# ==================================================
+
+- name: Build assets
   command:
     cmd: bench build
     chdir: "{{ bench_path }}"
   register: build_result
 
-- name: Deployment Success
+# ==================================================
+# Restart Bench
+# ==================================================
+
+- name: Restart bench
+  command:
+    cmd: bench restart
+    chdir: "{{ bench_path }}"
+  register: restart_result
+
+# ==================================================
+# Health Check
+# ==================================================
+
+- name: Check scheduler status
+  command:
+    cmd: >
+      bench --site {{ site_name }}
+      scheduler status
+    chdir: "{{ bench_path }}"
+  register: scheduler_result
+
+- name: Show scheduler status
+  debug:
+    var: scheduler_result.stdout_lines
+
+# ==================================================
+# Success Message
+# ==================================================
+
+- name: Deployment success
   debug:
     msg:
-      - "Application deployed successfully"
-      - "App: {{ app_name }}"
-      - "Site: {{ site_name }}"
-      - "Branch: {{ branch }}"
+      - "====================================="
+      - "DEPLOYMENT SUCCESSFUL"
+      - "Site   : {{ site_name }}"
+      - "App    : {{ app_name }}"
+      - "Branch : {{ branch }}"
+      - "====================================="
