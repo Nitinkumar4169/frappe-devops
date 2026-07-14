@@ -6,15 +6,11 @@
 - name: Validate required variables
   fail:
     msg: "site_name, app_name, repo_url and branch are required"
-  when: >
-    site_name is not defined or
-    site_name | length == 0 or
-    app_name is not defined or
-    app_name | length == 0 or
-    repo_url is not defined or
-    repo_url | length == 0 or
-    branch is not defined or
-    branch | length == 0
+  when:
+    - site_name is not defined or site_name | length == 0
+    - app_name is not defined or app_name | length == 0
+    - repo_url is not defined or repo_url | length == 0
+    - branch is not defined or branch | length == 0
 
 # ==================================================
 # Verify Site
@@ -121,21 +117,65 @@
 - block:
 
     # ----------------------------------------------
-    # Pull Latest Code
+    # Detect Git Remote
     # ----------------------------------------------
 
-    - name: Pull latest code
+    - name: Get git remote
       command:
-        cmd: git pull origin {{ branch }}
+        cmd: git remote
         chdir: "{{ bench_path }}/apps/{{ app_name }}"
-      register: git_pull_result
+      register: git_remote
 
-    - name: Show git pull output
+    - name: Show git remote
       debug:
-        var: git_pull_result.stdout_lines
+        var: git_remote.stdout_lines
 
     # ----------------------------------------------
-    # Migration
+    # Fetch Latest Code
+    # ----------------------------------------------
+
+    - name: Fetch latest code
+      command:
+        cmd: git fetch {{ git_remote.stdout_lines[0] }}
+        chdir: "{{ bench_path }}/apps/{{ app_name }}"
+      register: fetch_result
+
+    - name: Show fetch output
+      debug:
+        var: fetch_result.stdout_lines
+
+    # ----------------------------------------------
+    # Checkout Deployment Branch
+    # ----------------------------------------------
+
+    - name: Checkout deployment branch
+      command:
+        cmd: git checkout {{ branch }}
+        chdir: "{{ bench_path }}/apps/{{ app_name }}"
+      register: checkout_result
+
+    - name: Show checkout output
+      debug:
+        var: checkout_result.stdout_lines
+
+    # ----------------------------------------------
+    # Force Sync Branch
+    # ----------------------------------------------
+
+    - name: Force sync with remote branch
+      command:
+        cmd: >
+          git reset --hard
+          {{ git_remote.stdout_lines[0] }}/{{ branch }}
+        chdir: "{{ bench_path }}/apps/{{ app_name }}"
+      register: sync_result
+
+    - name: Show sync output
+      debug:
+        var: sync_result.stdout_lines
+
+    # ----------------------------------------------
+    # Run Migration
     # ----------------------------------------------
 
     - name: Run migration
@@ -166,11 +206,12 @@
       debug:
         var: rollback_result.stdout_lines
 
-    - fail:
+    - name: Deployment failed
+      fail:
         msg:
-          - "Migration failed."
+          - "Deployment failed."
           - "Application rolled back to previous commit."
-          - "Database backup is available for manual restore."
+          - "Database backup available for restore."
 
 # ==================================================
 # Clear Cache
