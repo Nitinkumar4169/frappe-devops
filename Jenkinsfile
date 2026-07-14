@@ -4,6 +4,10 @@ pipeline {
     options {
         skipDefaultCheckout(true)
     }
+    
+    tools {
+        git 'DefaultGit'
+    }
 
     parameters {
 
