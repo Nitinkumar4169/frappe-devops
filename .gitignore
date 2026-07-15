@@ -1,1 +1,4 @@
 ansible/group_vars/frappe.yml
+
+# Backup files
+*.bak
