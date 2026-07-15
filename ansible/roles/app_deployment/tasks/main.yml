@@ -1,19 +1,24 @@
 ---
 # ==================================================
-# Validate Variables
+# Validate Required Variables
 # ==================================================
 
 - name: Validate required variables
-  fail:
-    msg: "site_name, app_name, repo_url and branch are required"
-  when:
-    - site_name is not defined or site_name | length == 0
-    - app_name is not defined or app_name | length == 0
-    - repo_url is not defined or repo_url | length == 0
-    - branch is not defined or branch | length == 0
+  assert:
+    that:
+      - site_name is defined
+      - site_name | length > 0
+      - app_name is defined
+      - app_name | length > 0
+      - repo_url is defined
+      - repo_url | length > 0
+      - branch is defined
+      - branch | length > 0
+    fail_msg: >
+      site_name, app_name, repo_url and branch are required
 
 # ==================================================
-# Verify Site
+# Verify Site Exists
 # ==================================================
 
 - name: Check if site exists
@@ -36,13 +41,14 @@
   register: app_check
 
 # ==================================================
-# Download App if Missing
+# Download App If Missing
 # ==================================================
 
 - name: Download app if missing
   command:
     cmd: >
-      bench get-app --branch {{ branch }}
+      bench get-app
+      --branch {{ branch }}
       {{ app_name }}
       {{ repo_url }}
     chdir: "{{ bench_path }}"
@@ -69,7 +75,7 @@
   register: installed_apps
 
 # ==================================================
-# Install App if Missing
+# Install App If Missing
 # ==================================================
 
 - name: Install app if not installed
@@ -81,7 +87,7 @@
   when: app_name not in installed_apps.stdout
 
 # ==================================================
-# Backup Before Deployment
+# Backup Site
 # ==================================================
 
 - name: Backup site before deployment
@@ -100,13 +106,13 @@
 # Save Current Commit
 # ==================================================
 
-- name: Save current git commit
+- name: Get current git commit
   command:
     cmd: git rev-parse HEAD
     chdir: "{{ bench_path }}/apps/{{ app_name }}"
   register: current_commit
 
-- name: Show current commit
+- name: Display current commit
   debug:
     msg: "Current Commit: {{ current_commit.stdout }}"
 
@@ -116,9 +122,9 @@
 
 - block:
 
-    # ----------------------------------------------
-    # Detect Git Remote
-    # ----------------------------------------------
+    # ------------------------------------------
+    # Detect Remote
+    # ------------------------------------------
 
     - name: Get git remote
       command:
@@ -126,43 +132,29 @@
         chdir: "{{ bench_path }}/apps/{{ app_name }}"
       register: git_remote
 
-    - name: Show git remote
-      debug:
-        var: git_remote.stdout_lines
-
-    # ----------------------------------------------
+    # ------------------------------------------
     # Fetch Latest Code
-    # ----------------------------------------------
+    # ------------------------------------------
 
     - name: Fetch latest code
       command:
-        cmd: git fetch {{ git_remote.stdout_lines[0] }}
+        cmd: git fetch --all
         chdir: "{{ bench_path }}/apps/{{ app_name }}"
-      register: fetch_result
 
-    - name: Show fetch output
-      debug:
-        var: fetch_result.stdout_lines
-
-    # ----------------------------------------------
-    # Checkout Deployment Branch
-    # ----------------------------------------------
+    # ------------------------------------------
+    # Checkout Branch
+    # ------------------------------------------
 
     - name: Checkout deployment branch
       command:
         cmd: git checkout {{ branch }}
         chdir: "{{ bench_path }}/apps/{{ app_name }}"
-      register: checkout_result
 
-    - name: Show checkout output
-      debug:
-        var: checkout_result.stdout_lines
+    # ------------------------------------------
+    # Sync Branch
+    # ------------------------------------------
 
-    # ----------------------------------------------
-    # Force Sync Branch
-    # ----------------------------------------------
-
-    - name: Force sync with remote branch
+    - name: Sync branch with remote
       command:
         cmd: >
           git reset --hard
@@ -170,13 +162,41 @@
         chdir: "{{ bench_path }}/apps/{{ app_name }}"
       register: sync_result
 
-    - name: Show sync output
-      debug:
-        var: sync_result.stdout_lines
+    # ------------------------------------------
+    # Get New Commit
+    # ------------------------------------------
 
-    # ----------------------------------------------
+    - name: Get latest commit
+      command:
+        cmd: git rev-parse HEAD
+        chdir: "{{ bench_path }}/apps/{{ app_name }}"
+      register: latest_commit
+
+    - name: Display latest commit
+      debug:
+        msg: "Latest Commit: {{ latest_commit.stdout }}"
+
+    # ------------------------------------------
+    # Build Only If Code Changed
+    # ------------------------------------------
+
+    - name: Build assets
+      command:
+        cmd: timeout 1800 bench build
+        chdir: "{{ bench_path }}"
+      register: build_result
+      when: current_commit.stdout != latest_commit.stdout
+
+    - name: Show build output
+      debug:
+        var: build_result.stdout_lines
+      when:
+        - build_result is defined
+        - current_commit.stdout != latest_commit.stdout
+
+    # ------------------------------------------
     # Run Migration
-    # ----------------------------------------------
+    # ------------------------------------------
 
     - name: Run migration
       command:
@@ -190,11 +210,45 @@
       debug:
         var: migrate_result.stdout_lines
 
+    # ------------------------------------------
+    # Clear Cache
+    # ------------------------------------------
+
+    - name: Clear cache
+      command:
+        cmd: >
+          bench --site {{ site_name }}
+          clear-cache
+        chdir: "{{ bench_path }}"
+
+    - name: Clear website cache
+      command:
+        cmd: >
+          bench --site {{ site_name }}
+          clear-website-cache
+        chdir: "{{ bench_path }}"
+
+    # ------------------------------------------
+    # Restart Bench
+    # ------------------------------------------
+
+    - name: Restart bench
+      command:
+        cmd: bench restart
+        chdir: "{{ bench_path }}"
+      register: restart_result
+      async: 300
+      poll: 10
+
+    - name: Show restart output
+      debug:
+        var: restart_result.stdout_lines
+
   rescue:
 
-    # ----------------------------------------------
-    # Rollback Git Commit
-    # ----------------------------------------------
+    # ------------------------------------------
+    # Rollback
+    # ------------------------------------------
 
     - name: Rollback to previous commit
       command:
@@ -206,54 +260,12 @@
       debug:
         var: rollback_result.stdout_lines
 
-    - name: Deployment failed
+    - name: Fail deployment
       fail:
         msg:
-          - "Deployment failed."
-          - "Application rolled back to previous commit."
-          - "Database backup available for restore."
-
-# ==================================================
-# Clear Cache
-# ==================================================
-
-- name: Clear cache
-  command:
-    cmd: >
-      bench --site {{ site_name }}
-      clear-cache
-    chdir: "{{ bench_path }}"
-
-# ==================================================
-# Clear Website Cache
-# ==================================================
-
-- name: Clear website cache
-  command:
-    cmd: >
-      bench --site {{ site_name }}
-      clear-website-cache
-    chdir: "{{ bench_path }}"
-
-# ==================================================
-# Build Assets
-# ==================================================
-
-- name: Build assets
-  command:
-    cmd: bench build
-    chdir: "{{ bench_path }}"
-  register: build_result
-
-# ==================================================
-# Restart Bench
-# ==================================================
-
-- name: Restart bench
-  command:
-    cmd: bench restart
-    chdir: "{{ bench_path }}"
-  register: restart_result
+          - "Deployment failed"
+          - "Rollback completed"
+          - "Database backup available"
 
 # ==================================================
 # Health Check
@@ -271,6 +283,16 @@
   debug:
     var: scheduler_result.stdout_lines
 
+- name: Run bench doctor
+  command:
+    cmd: bench doctor
+    chdir: "{{ bench_path }}"
+  register: doctor_result
+
+- name: Show doctor output
+  debug:
+    var: doctor_result.stdout_lines
+
 # ==================================================
 # Success Message
 # ==================================================
@@ -278,9 +300,9 @@
 - name: Deployment success
   debug:
     msg:
-      - "====================================="
+      - "=================================="
       - "DEPLOYMENT SUCCESSFUL"
       - "Site   : {{ site_name }}"
       - "App    : {{ app_name }}"
       - "Branch : {{ branch }}"
-      - "====================================="
+      - "=================================="
