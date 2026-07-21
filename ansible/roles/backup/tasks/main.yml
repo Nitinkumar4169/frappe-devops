@@ -18,7 +18,7 @@
 - name: Take Backup
   command:
     cmd: >
-      bench --site {{ site_name }} backup
+      bench --site {{ site_name }} backup --with-files
     chdir: "{{ bench_path }}"
   register: backup_result
 
