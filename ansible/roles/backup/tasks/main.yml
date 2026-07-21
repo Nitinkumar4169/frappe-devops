@@ -30,7 +30,7 @@
 
 - name: Get Latest Public Files Backup
   shell: |
-    ls -t {{ bench_path }}/sites/{{ site_name }}/private/backups/*files.tar | grep -v private | head -1
+    ls -t {{ bench_path }}/sites/{{ site_name }}/private/backups/*files.tar | head -1
   register: public_backup
   changed_when: false
 
