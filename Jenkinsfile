@@ -99,9 +99,9 @@ pipeline {
                 -e app_name='${APP_NAME}' \
                 -e repo_url='${REPO_URL}' \
                 -e branch='${BRANCH}' \
-                -e db_backup='${DB_BACKUP}' \
-                -e public_backup='${PUBLIC_BACKUP}' \
-                -e private_backup='${PRIVATE_BACKUP}'
+                -e restore_db_backup='${DB_BACKUP}' \
+                -e restore_public_backup='${PUBLIC_BACKUP}' \
+                -e restore_private_backup='${PRIVATE_BACKUP}'
                 """
             }
         }
