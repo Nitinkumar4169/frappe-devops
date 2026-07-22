@@ -43,9 +43,9 @@
 - name: Display Backup Information
   debug:
     msg:
-      - "Database Backup : {{ db_backup.stdout }}"
-      - "Public Backup   : {{ public_backup.stdout }}"
-      - "Private Backup  : {{ private_backup.stdout }}"
+      - "Database Backup : {{ restore_db_backup.stdout }}"
+      - "Public Backup   : {{ restore_public_backup.stdout }}"
+      - "Private Backup  : {{ restore_private_backup.stdout }}"
 
 - name: Backup Success
   debug:
