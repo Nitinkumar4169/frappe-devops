@@ -7,7 +7,25 @@
     - db_backup is not defined or db_backup | length == 0
     - public_backup is not defined or public_backup | length == 0
     - private_backup is not defined or private_backup | length == 0
+    
+- name: Get Latest Database Backup
+  shell: |
+    ls -t {{ bench_path }}/sites/{{ site_name }}/private/backups/*database.sql.gz | head -1
+  register: latest_db_backup
+  changed_when: false
 
+- name: Get Latest Public Files Backup
+  shell: |
+    ls -t {{ bench_path }}/sites/{{ site_name }}/private/backups/*files.tar | grep -v "^.*private-files.tar$" | head -1
+  register: latest_public_backup
+  changed_when: false
+
+- name: Get Latest Private Files Backup
+  shell: |
+    ls -t {{ bench_path }}/sites/{{ site_name }}/private/backups/*private-files.tar | head -1
+  register: latest_private_backup
+  changed_when: false
+  
 - name: Check database backup exists
   stat:
     path: "{{ latest_db_backup.stdout }}"
