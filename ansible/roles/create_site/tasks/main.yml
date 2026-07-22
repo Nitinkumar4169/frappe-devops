@@ -20,10 +20,15 @@
     chdir: "{{ bench_path }}"
   when: not site_check.stat.exists
   
+- name: Wait before nginx reload
+  pause:
+    seconds: 5
+
 - name: Reload Nginx
-  command: /usr/bin/systemctl reload nginx
-  register: reload_result
-  changed_when: reload_result.rc == 0
+  become: true
+  systemd:
+    name: nginx
+    state: reloaded
   
 - name: Success Message
   debug:
