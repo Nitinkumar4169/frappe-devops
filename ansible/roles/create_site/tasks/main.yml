@@ -16,16 +16,20 @@
 - name: Setting up nginx
   command:
     cmd: >
-      bench setup nginx
+      bench setup nginx --yes
     chdir: "{{ bench_path }}"
-  register: nginx_setup
-
-- debug:
-    var: nginx_setup.delta
-
+  when: not site_check.stat.exists
+  
 - name: Reload Nginx
   become: yes
   service:
     name: nginx
     state: reloaded
   when: not site_check.stat.exists
+
+  
+- name: Success Message
+  debug:
+    msg:
+      - "Site created successfully"
+      - "Site Name : {{ site_name }}"
