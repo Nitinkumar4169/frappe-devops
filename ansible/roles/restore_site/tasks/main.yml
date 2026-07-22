@@ -10,32 +10,32 @@
 
 - name: Check database backup exists
   stat:
-    path: "{{ restore_db_backup }}"
+    path: "{{ latest_db_backup }}"
   register: db_backup_check
 
 - name: Fail if database backup missing
   fail:
-    msg: "Database backup not found: {{ restore_db_backup }}"
+    msg: "Database backup not found: {{ latest_db_backup }}"
   when: not db_backup_check.stat.exists
 
 - name: Check public files backup exists
   stat:
-    path: "{{ restore_public_backup }}"
+    path: "{{ latest_public_backup }}"
   register: public_backup_check
 
 - name: Fail if public backup missing
   fail:
-    msg: "Public backup not found: {{ restore_public_backup }}"
+    msg: "Public backup not found: {{ latest_public_backup }}"
   when: not public_backup_check.stat.exists
 
 - name: Check private files backup exists
   stat:
-    path: "{{ restore_private_backup }}"
+    path: "{{ latest_private_backup }}"
   register: private_backup_check
 
 - name: Fail if private backup missing
   fail:
-    msg: "Private backup not found: {{ restore_private_backup }}"
+    msg: "Private backup not found: {{ latest_private_backup }}"
   when: not private_backup_check.stat.exists
 
 - name: Check if site exists
@@ -83,6 +83,6 @@
     msg:
       - "Site restored successfully"
       - "Site: {{ site_name }}"
-      - "Database: {{ restore_db_backup }}"
-      - "Public Files: {{ restore_public_backup }}"
-      - "Private Files: {{ _restore_private_backup }}"
+      - "Database: {{ latest_db_backup.stdout }}"
+      - "Public Files: {{ latest_public_backup.stdout }}"
+      - "Private Files: {{ latest_private_backup.stdout }}"
