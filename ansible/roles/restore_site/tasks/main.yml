@@ -56,9 +56,9 @@
   command:
     cmd: >
       bench --site {{ site_name }}
-      restore {{ restore_db_backup.stdout }}
-      --with-public-files {{ restore_public_backup.stdout }}
-      --with-private-files {{ restore_private_backup.stdout }}
+      restore {{ latest_db_backup.stdout }}
+      --with-public-files {{ latest_public_backup.stdout }}
+      --with-private-files {{ latest_private_backup.stdout }}
       --db-root-password {{ mariadb_root_password }}
       --force
     chdir: "{{ bench_path }}"
