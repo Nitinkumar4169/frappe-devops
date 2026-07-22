@@ -12,3 +12,15 @@
       --mariadb-root-password {{ mariadb_root_password }}
     chdir: "{{ bench_path }}"
   when: not site_check.stat.exists
+
+- name: Setting up nginx
+  command:
+    cmd: >
+      bench setup nginx
+    chdir: "{{ bench_path }}"
+
+- name: Reload Nginx
+  become: yes
+  service:
+    name: nginx
+    state: reloaded
