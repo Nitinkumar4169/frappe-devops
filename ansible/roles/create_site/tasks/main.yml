@@ -18,7 +18,10 @@
     cmd: >
       bench setup nginx
     chdir: "{{ bench_path }}"
-  when: not site_check.stat.exists
+  register: nginx_setup
+
+- debug:
+    var: nginx_setup.delta
 
 - name: Reload Nginx
   become: yes
