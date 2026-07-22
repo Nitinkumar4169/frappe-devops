@@ -21,12 +21,7 @@
   when: not site_check.stat.exists
   
 - name: Reload Nginx
-  become: yes
-  service:
-    name: nginx
-    state: reloaded
-  when: not site_check.stat.exists
-
+  command: sudo systemctl reload nginx
   
 - name: Success Message
   debug:
