@@ -25,27 +25,27 @@
 - name: Get Latest Database Backup
   shell: |
     ls -t {{ bench_path }}/sites/{{ site_name }}/private/backups/*database.sql.gz | head -1
-  register: restore_db_backup
+  register: latest_db_backup
   changed_when: false
 
 - name: Get Latest Public Files Backup
   shell: |
     ls -t {{ bench_path }}/sites/{{ site_name }}/private/backups/*files.tar | grep -v "^.*private-files.tar$" | head -1
-  register: restore_public_backup
+  register: latest_public_backup
   changed_when: false
 
 - name: Get Latest Private Files Backup
   shell: |
     ls -t {{ bench_path }}/sites/{{ site_name }}/private/backups/*private-files.tar | head -1
-  register: restore_private_backup
+  register: latest_private_backup
   changed_when: false
 
 - name: Display Backup Information
   debug:
     msg:
-      - "Database Backup : {{ restore_db_backup.stdout }}"
-      - "Public Backup   : {{ restore_public_backup.stdout }}"
-      - "Private Backup  : {{ restore_private_backup.stdout }}"
+      - "Database Backup : {{ latest_db_backup.stdout }}"
+      - "Public Backup   : {{ latest_public_backup.stdout }}"
+      - "Private Backup  : {{ latest_private_backup.stdout }}"
 
 - name: Backup Success
   debug:
