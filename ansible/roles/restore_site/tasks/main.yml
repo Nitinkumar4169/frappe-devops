@@ -10,32 +10,32 @@
 
 - name: Check database backup exists
   stat:
-    path: "{{ latest_db_backup }}"
+    path: "{{ latest_db_backup.stdout }}"
   register: db_backup_check
 
 - name: Fail if database backup missing
   fail:
-    msg: "Database backup not found: {{ latest_db_backup }}"
+    msg: "Database backup not found: {{ latest_db_backup.stdout }}"
   when: not db_backup_check.stat.exists
 
 - name: Check public files backup exists
   stat:
-    path: "{{ latest_public_backup }}"
+    path: "{{ latest_public_backup.stdout }}"
   register: public_backup_check
 
 - name: Fail if public backup missing
   fail:
-    msg: "Public backup not found: {{ latest_public_backup }}"
+    msg: "Public backup not found: {{ latest_public_backup.stdout }}"
   when: not public_backup_check.stat.exists
 
 - name: Check private files backup exists
   stat:
-    path: "{{ latest_private_backup }}"
+    path: "{{ latest_private_backup.stdout }}"
   register: private_backup_check
 
 - name: Fail if private backup missing
   fail:
-    msg: "Private backup not found: {{ latest_private_backup }}"
+    msg: "Private backup not found: {{ latest_private_backup.stdout }}"
   when: not private_backup_check.stat.exists
 
 - name: Check if site exists
