@@ -21,9 +21,10 @@
   when: not site_check.stat.exists
   
 - name: Reload Nginx
-  command: sudo /usr/bin/systemctl reload nginx
-  register: reload_result
-  changed_when: reload_result.rc == 0
+  become: true
+  systemd:
+    name: nginx
+    state: reloaded
   
 - name: Success Message
   debug:
