@@ -25,19 +25,19 @@
 - name: Get Latest Database Backup
   shell: |
     ls -t {{ bench_path }}/sites/{{ site_name }}/private/backups/*database.sql.gz | head -1
-  register: db_backup
+  register: restore_db_backup
   changed_when: false
 
 - name: Get Latest Public Files Backup
   shell: |
     ls -t {{ bench_path }}/sites/{{ site_name }}/private/backups/*files.tar | grep -v "^.*private-files.tar$" | head -1
-  register: public_backup
+  register: restore_public_backup
   changed_when: false
 
 - name: Get Latest Private Files Backup
   shell: |
     ls -t {{ bench_path }}/sites/{{ site_name }}/private/backups/*private-files.tar | head -1
-  register: private_backup
+  register: restore_private_backup
   changed_when: false
 
 - name: Display Backup Information
