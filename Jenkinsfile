@@ -88,21 +88,23 @@ pipeline {
 
         stage('Run Ansible') {
             steps {
-
+                 withCredentials([string(credentialsId: 'sudo-pass', variable: 'SUDO_PASS')]) {
                 sh """
                 cd ansible
 
                 ansible-playbook \
                  -i inventory.ini \
                  playbooks/${ACTION}.yml \
-                -e site_name='${SITE_NAME}' \
-                -e app_name='${APP_NAME}' \
-                -e repo_url='${REPO_URL}' \
-                -e branch='${BRANCH}' \
-                -e restore_db_backup='${DB_BACKUP}' \
-                -e restore_public_backup='${PUBLIC_BACKUP}' \
-                -e restore_private_backup='${PRIVATE_BACKUP}'
+                 --extra-vars "ansible_become=true ansible_become_method=sudo ansible_become_password=${SUDO_PASS}" \
+                 -e site_name='${SITE_NAME}' \
+                 -e app_name='${APP_NAME}' \
+                 -e repo_url='${REPO_URL}' \
+                 -e branch='${BRANCH}' \
+                 -e restore_db_backup='${DB_BACKUP}' \
+                 -e restore_public_backup='${PUBLIC_BACKUP}' \
+                 -e restore_private_backup='${PRIVATE_BACKUP}'
                 """
+                 }
             }
         }
     }
