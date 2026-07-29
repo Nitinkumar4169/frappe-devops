@@ -49,13 +49,13 @@ pipeline {
             name: 'GITHUB_CREDENTIAL',
             credentialType: 'org.jenkinsci.plugins.plaincredentials.StringCredentials',
             description: 'Select GitHub Token'
-       )
-        string(
+          )
+
+         string(
             name: 'BRANCH',
             defaultValue: 'main',
             description: 'Git branch'
         )
-
     }
 
     stages {
