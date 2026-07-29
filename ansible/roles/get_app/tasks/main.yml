@@ -20,7 +20,7 @@
   command:
     cmd: >
       bench get-app
-      https://{{ git_user }}:{{ git_token }}@{{ repo_url | regex_replace('https://', '') }}
+      https://{{ git_user }}:{{ git_token }}@github.com/backendbysuraj/hrms.git
       {% if branch is defined and branch | length > 0 %}
       --branch {{ branch }}
       {% endif %}
