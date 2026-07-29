@@ -47,9 +47,9 @@ pipeline {
 
         credentials(
             name: 'GITHUB_CREDENTIAL',
-            credentialType: 'org.jenkinsci.plugins.plaincredentials.StringCredentials',
-            description: 'Select GitHub Token'
-          )
+            credentialType: 'com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials',
+            description: 'Select GitHub Username/Password Credential'
+        )
 
          string(
             name: 'BRANCH',
