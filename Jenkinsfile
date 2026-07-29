@@ -102,6 +102,10 @@ pipeline {
                          )
             ]) {
                 sh """
+
+                echo "Git User: ${GIT_USER}"
+                echo "Token Length: \${#GIT_TOKEN}"
+
                 cd ansible
 
                 ansible-playbook \
