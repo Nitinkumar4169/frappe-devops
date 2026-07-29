@@ -45,29 +45,17 @@ pipeline {
             description: 'Git repository URL'
         )
 
+        credentials(
+            name: 'GITHUB_CREDENTIAL',
+            credentialType: 'org.jenkinsci.plugins.plaincredentials.StringCredentials',
+            description: 'Select GitHub Token'
+       )
         string(
             name: 'BRANCH',
             defaultValue: 'main',
             description: 'Git branch'
         )
 
-        string(
-            name: 'DB_BACKUP',
-            defaultValue: '',
-            description: 'Database backup file'
-        )
-
-        string(
-            name: 'PUBLIC_BACKUP',
-            defaultValue: '',
-            description: 'Public files backup'
-        )
-
-        string(
-            name: 'PRIVATE_BACKUP',
-            defaultValue: '',
-            description: 'Private files backup'
-        )
     }
 
     stages {
@@ -88,7 +76,14 @@ pipeline {
 
         stage('Run Ansible') {
             steps {
-                 withCredentials([string(credentialsId: 'sudo-pass', variable: 'SUDO_PASS')]) {
+                 withCredentials([
+                     string(credentialsId: 'sudo-pass', variable: 'SUDO_PASS'),
+                     usernamePassword(
+                        credentialsId: params.GITHUB_CREDENTIAL,
+                        usernameVariable: 'GIT_USER',
+                        passwordVariable: 'GIT_TOKEN'
+                         )
+            ]) {
                 sh """
                 cd ansible
 
@@ -99,6 +94,8 @@ pipeline {
                  -e site_name='${SITE_NAME}' \
                  -e app_name='${APP_NAME}' \
                  -e repo_url='${REPO_URL}' \
+                 -e git_user='${GIT_USER}' \
+                 -e git_token='${GIT_TOKEN}' \
                  -e branch='${BRANCH}' \
                  -e restore_db_backup='${DB_BACKUP}' \
                  -e restore_public_backup='${PUBLIC_BACKUP}' \
