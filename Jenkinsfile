@@ -45,28 +45,16 @@ pipeline {
             description: 'Git repository URL'
         )
 
-        string(
+        credentials(
+            name: 'GITHUB_CREDENTIAL',
+            credentialType: 'org.jenkinsci.plugins.plaincredentials.StringCredentials',
+            description: 'Select GitHub Token'
+        )
+
+         string(
             name: 'BRANCH',
             defaultValue: 'main',
             description: 'Git branch'
-        )
-
-        string(
-            name: 'DB_BACKUP',
-            defaultValue: '',
-            description: 'Database backup file'
-        )
-
-        string(
-            name: 'PUBLIC_BACKUP',
-            defaultValue: '',
-            description: 'Public files backup'
-        )
-
-        string(
-            name: 'PRIVATE_BACKUP',
-            defaultValue: '',
-            description: 'Private files backup'
         )
     }
 
