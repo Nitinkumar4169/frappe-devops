@@ -56,6 +56,23 @@ pipeline {
             defaultValue: 'main',
             description: 'Git branch'
         )
+        string(
+            name: 'DB_BACKUP',
+            defaultValue: '',
+            description: 'Database backup file name (e.g. site_database.sql.gz)'
+        )
+        
+        string(
+            name: 'PUBLIC_BACKUP',
+            defaultValue: '',
+            description: 'Public files backup (e.g. site_files.tar)'
+        )
+        
+        string(
+            name: 'PRIVATE_BACKUP',
+            defaultValue: '',
+            description: 'Private files backup (e.g. site_private_files.tar)'
+        )
     }
 
     stages {
