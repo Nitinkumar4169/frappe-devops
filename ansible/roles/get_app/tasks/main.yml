@@ -27,7 +27,6 @@
     chdir: "{{ bench_path }}"
   register: get_app_result
   when: not app_check.stat.exists
-  no_log: true
 
 - name: Verify App Downloaded
   stat:
