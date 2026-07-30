@@ -114,6 +114,10 @@ pipeline {
                                 credentialsId: 'sudo-pass',
                                 variable: 'SUDO_PASS'
                             ),
+                            string(
+                                credentialsId: 'ansible-vault-password',
+                                variable: 'VAULT_PASSWORD'
+                            ),
                             usernamePassword(
                                 credentialsId: params.GITHUB_CREDENTIAL,
                                 usernameVariable: 'GIT_USER',
@@ -204,15 +208,28 @@ pipeline {
 
                     } else if (params.ACTION == 'health_check') {
 
-                        sh '''
-                            set +x
-
-                            cd ansible
-
-                            /opt/ansible-venv/bin/ansible-playbook \
-                              -i inventory.ini \
-                              playbooks/${ACTION}.yml
-                        '''
+                        withCredentials([
+                            string(
+                                credentialsId: 'ansible-vault-password',
+                                variable: 'VAULT_PASSWORD'
+                            )
+                        ]) {
+                    
+                            sh '''
+                                set +x
+                    
+                                cd ansible
+                    
+                                printf '%s' "$VAULT_PASSWORD" > vault_password.txt
+                    
+                                trap 'rm -f vault_password.txt' EXIT
+                    
+                                /opt/ansible-venv/bin/ansible-playbook \
+                                  -i inventory.ini \
+                                  playbooks/${ACTION}.yml \
+                                  --vault-password-file=vault_password.txt
+                            '''
+                        }
 
                     /*
                      * =====================================================
