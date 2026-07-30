@@ -1,11 +1,10 @@
-
 pipeline {
     agent any
 
     options {
         skipDefaultCheckout(true)
     }
-    
+
     tools {
         git 'Default'
     }
@@ -52,27 +51,28 @@ pipeline {
             description: 'Select GitHub Username/Password Credential'
         )
 
-         string(
+        string(
             name: 'BRANCH',
             defaultValue: 'main',
             description: 'Git branch'
         )
+
         string(
             name: 'DB_BACKUP',
             defaultValue: '',
-            description: 'Database backup file name (e.g. site_database.sql.gz)'
+            description: 'Database backup file name'
         )
-        
+
         string(
             name: 'PUBLIC_BACKUP',
             defaultValue: '',
-            description: 'Public files backup (e.g. site_files.tar)'
+            description: 'Public files backup'
         )
-        
+
         string(
             name: 'PRIVATE_BACKUP',
             defaultValue: '',
-            description: 'Private files backup (e.g. site_private_files.tar)'
+            description: 'Private files backup'
         )
     }
 
@@ -83,25 +83,32 @@ pipeline {
                 checkout scm
             }
         }
+
         stage('Set Build Name') {
-           steps {
-              script {
-                  currentBuild.displayName =
-                      "${params.ACTION}-${params.SITE_NAME}"
-              }
-           }
+            steps {
+                script {
+                    currentBuild.displayName =
+                        "${params.ACTION}-${params.SITE_NAME}"
+                }
+            }
         }
 
         stage('Run Ansible') {
             steps {
                 script {
-        
-                    // =========================================================
-                    // GET APP
-                    // GitHub + SUDO + VAULT
-                    // =========================================================
+
+                    /*
+                     * =====================================================
+                     * GET APP
+                     * Requires:
+                     *   - sudo password
+                     *   - GitHub username/password
+                     *   - Ansible Vault password
+                     * =====================================================
+                     */
+
                     if (params.ACTION == 'get_app') {
-        
+
                         withCredentials([
                             string(
                                 credentialsId: 'sudo-pass',
@@ -117,15 +124,16 @@ pipeline {
                                 passwordVariable: 'GIT_TOKEN'
                             )
                         ]) {
-        
+
                             sh '''
                                 set +x
-        
+
                                 cd ansible
-        
+
                                 printf '%s' "$VAULT_PASSWORD" > vault_password.txt
+
                                 trap 'rm -f vault_password.txt' EXIT
-        
+
                                 /opt/ansible-venv/bin/ansible-playbook \
                                   -i inventory.ini \
                                   playbooks/${ACTION}.yml \
@@ -142,17 +150,20 @@ pipeline {
                                   -e "restore_private_backup=$PRIVATE_BACKUP"
                             '''
                         }
-        
-                    // =========================================================
-                    // ACTIONS REQUIRING SUDO + VAULT
-                    // =========================================================
+
+                    /*
+                     * =====================================================
+                     * ACTIONS REQUIRING SUDO + VAULT
+                     * =====================================================
+                     */
+
                     } else if (
                         params.ACTION == 'backup' ||
                         params.ACTION == 'restore_site' ||
                         params.ACTION == 'migrate_site' ||
                         params.ACTION == 'drop_site'
                     ) {
-        
+
                         withCredentials([
                             string(
                                 credentialsId: 'sudo-pass',
@@ -163,15 +174,16 @@ pipeline {
                                 variable: 'VAULT_PASSWORD'
                             )
                         ]) {
-        
+
                             sh '''
                                 set +x
-        
+
                                 cd ansible
-        
+
                                 printf '%s' "$VAULT_PASSWORD" > vault_password.txt
+
                                 trap 'rm -f vault_password.txt' EXIT
-        
+
                                 /opt/ansible-venv/bin/ansible-playbook \
                                   -i inventory.ini \
                                   playbooks/${ACTION}.yml \
@@ -186,47 +198,51 @@ pipeline {
                                   -e "restore_private_backup=$PRIVATE_BACKUP"
                             '''
                         }
-        
-                    // =========================================================
-                    // HEALTH CHECK
-                    // NO CREDENTIALS
-                    // =========================================================
+
+                    /*
+                     * =====================================================
+                     * HEALTH CHECK
+                     * No credentials
+                     * =====================================================
+                     */
+
                     } else if (params.ACTION == 'health_check') {
-        
+
                         sh '''
                             set +x
-        
+
                             cd ansible
-        
+
                             /opt/ansible-venv/bin/ansible-playbook \
                               -i inventory.ini \
                               playbooks/${ACTION}.yml
                         '''
-        
-                    // =========================================================
-                    // OTHER ACTIONS
-                    // VAULT ONLY
-                    //
-                    // If these playbooks also need sudo, move them into the
-                    // sudo + vault section above.
-                    // =========================================================
+
+                    /*
+                     * =====================================================
+                     * OTHER ACTIONS
+                     * Vault password only
+                     * =====================================================
+                     */
+
                     } else {
-        
+
                         withCredentials([
                             string(
                                 credentialsId: 'ansible-vault-password',
                                 variable: 'VAULT_PASSWORD'
                             )
                         ]) {
-        
+
                             sh '''
                                 set +x
-        
+
                                 cd ansible
-        
+
                                 printf '%s' "$VAULT_PASSWORD" > vault_password.txt
+
                                 trap 'rm -f vault_password.txt' EXIT
-        
+
                                 /opt/ansible-venv/bin/ansible-playbook \
                                   -i inventory.ini \
                                   playbooks/${ACTION}.yml \
@@ -244,6 +260,7 @@ pipeline {
                 }
             }
         }
+    }
 
     post {
 
