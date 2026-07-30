@@ -114,10 +114,6 @@ pipeline {
                                 credentialsId: 'sudo-pass',
                                 variable: 'SUDO_PASS'
                             ),
-                            string(
-                                credentialsId: 'ansible-vault-password',
-                                variable: 'VAULT_PASSWORD'
-                            ),
                             usernamePassword(
                                 credentialsId: params.GITHUB_CREDENTIAL,
                                 usernameVariable: 'GIT_USER',
