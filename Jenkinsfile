@@ -108,6 +108,7 @@ pipeline {
 
                 cd ansible
 
+<<<<<<< HEAD
                 ansible-playbook \
                  -i inventory.ini \
                  playbooks/${ACTION}.yml \
@@ -121,6 +122,18 @@ pipeline {
                  -e restore_db_backup='${DB_BACKUP}' \
                  -e restore_public_backup='${PUBLIC_BACKUP}' \
                  -e restore_private_backup='${PRIVATE_BACKUP}'
+=======
+                /opt/ansible-venv/bin/ansible-playbook \
+                -i inventory.ini \
+                playbooks/${ACTION}.yml \
+                -e site_name='${SITE_NAME}' \
+                -e app_name='${APP_NAME}' \
+                -e repo_url='${REPO_URL}' \
+                -e branch='${BRANCH}' \
+                -e restore_db_backup='${DB_BACKUP}' \
+                -e restore_public_backup='${PUBLIC_BACKUP}' \
+                -e restore_private_backup='${PRIVATE_BACKUP}'
+>>>>>>> ca35b9b (Integrate Ansible Vault and update Jenkins Ansible environment)
                 """
                  }
             }
