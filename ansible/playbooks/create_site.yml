@@ -2,5 +2,8 @@
 - hosts: frappe
   become: no
 
+  vars_files:
+    - ../vars/vault.yml
+
   roles:
     - create_site

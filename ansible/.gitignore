@@ -1,0 +1,5 @@
+# Ansible Vault
+vars/vault.yml
+
+# Vault password files
+vault_password.txt
