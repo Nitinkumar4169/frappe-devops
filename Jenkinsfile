@@ -96,27 +96,26 @@ pipeline {
         stage('Run Ansible') {
             steps {
                 script {
-
+        
                     /*
-                     * =====================================================
+                     * ============================================================
                      * GET APP
+                     *
                      * Requires:
                      *   - sudo password
                      *   - GitHub username/password
-                     *   - Ansible Vault password
-                     * =====================================================
+                     *
+                     * Does NOT require:
+                     *   - Vault password
+                     * ============================================================
                      */
-
+        
                     if (params.ACTION == 'get_app') {
-
+        
                         withCredentials([
                             string(
                                 credentialsId: 'sudo-pass',
                                 variable: 'SUDO_PASS'
-                            ),
-                            string(
-                                credentialsId: 'ansible-vault-password',
-                                variable: 'VAULT_PASSWORD'
                             ),
                             usernamePassword(
                                 credentialsId: params.GITHUB_CREDENTIAL,
@@ -124,20 +123,15 @@ pipeline {
                                 passwordVariable: 'GIT_TOKEN'
                             )
                         ]) {
-
+        
                             sh '''
                                 set +x
-
+        
                                 cd ansible
-
-                                printf '%s' "$VAULT_PASSWORD" > vault_password.txt
-
-                                trap 'rm -f vault_password.txt' EXIT
-
+        
                                 /opt/ansible-venv/bin/ansible-playbook \
                                   -i inventory.ini \
                                   playbooks/${ACTION}.yml \
-                                  --vault-password-file=vault_password.txt \
                                   --extra-vars "ansible_become=true ansible_become_method=sudo ansible_become_password=$SUDO_PASS" \
                                   -e "site_name=$SITE_NAME" \
                                   -e "app_name=$APP_NAME" \
@@ -150,45 +144,47 @@ pipeline {
                                   -e "restore_private_backup=$PRIVATE_BACKUP"
                             '''
                         }
-
+        
+        
                     /*
-                     * =====================================================
-                     * ACTIONS REQUIRING SUDO + VAULT
-                     * =====================================================
+                     * ============================================================
+                     * CREATE SITE / RESTORE SITE / DROP SITE
+                     *
+                     * Requires:
+                     *   - Ansible Vault password
+                     *
+                     * Does NOT require:
+                     *   - GitHub credentials
+                     *   - sudo password
+                     * ============================================================
                      */
-
+        
                     } else if (
-                        params.ACTION == 'backup' ||
+                        params.ACTION == 'create_site' ||
                         params.ACTION == 'restore_site' ||
-                        params.ACTION == 'migrate_site' ||
                         params.ACTION == 'drop_site'
                     ) {
-
+        
                         withCredentials([
-                            string(
-                                credentialsId: 'sudo-pass',
-                                variable: 'SUDO_PASS'
-                            ),
                             string(
                                 credentialsId: 'ansible-vault-password',
                                 variable: 'VAULT_PASSWORD'
                             )
                         ]) {
-
+        
                             sh '''
                                 set +x
-
+        
                                 cd ansible
-
+        
                                 printf '%s' "$VAULT_PASSWORD" > vault_password.txt
-
+        
                                 trap 'rm -f vault_password.txt' EXIT
-
+        
                                 /opt/ansible-venv/bin/ansible-playbook \
                                   -i inventory.ini \
                                   playbooks/${ACTION}.yml \
                                   --vault-password-file=vault_password.txt \
-                                  --extra-vars "ansible_become=true ansible_become_method=sudo ansible_become_password=$SUDO_PASS" \
                                   -e "site_name=$SITE_NAME" \
                                   -e "app_name=$APP_NAME" \
                                   -e "repo_url=$REPO_URL" \
@@ -198,70 +194,39 @@ pipeline {
                                   -e "restore_private_backup=$PRIVATE_BACKUP"
                             '''
                         }
-
+        
+        
                     /*
-                     * =====================================================
-                     * HEALTH CHECK
-                     * No credentials
-                     * =====================================================
+                     * ============================================================
+                     * HEALTH CHECK / INSTALL APP / BACKUP / MIGRATE
+                     *
+                     * NO CREDENTIALS
+                     * ============================================================
                      */
-
-                    } else if (params.ACTION == 'health_check') {
-                    
-                            sh '''
-                                set +x
-                    
-                                cd ansible
-                    
-                                /opt/ansible-venv/bin/ansible-playbook \
-                                  -i inventory.ini \
-                                  playbooks/${ACTION}.yml \
-                            '''
-                        }
-
-                    /*
-                     * =====================================================
-                     * OTHER ACTIONS
-                     * Vault password only
-                     * =====================================================
-                     */
-
+        
                     } else {
-
-                        withCredentials([
-                            string(
-                                credentialsId: 'ansible-vault-password',
-                                variable: 'VAULT_PASSWORD'
-                            )
-                        ]) {
-
-                            sh '''
-                                set +x
-
-                                cd ansible
-
-                                printf '%s' "$VAULT_PASSWORD" > vault_password.txt
-
-                                trap 'rm -f vault_password.txt' EXIT
-
-                                /opt/ansible-venv/bin/ansible-playbook \
-                                  -i inventory.ini \
-                                  playbooks/${ACTION}.yml \
-                                  --vault-password-file=vault_password.txt \
-                                  -e "site_name=$SITE_NAME" \
-                                  -e "app_name=$APP_NAME" \
-                                  -e "repo_url=$REPO_URL" \
-                                  -e "branch=$BRANCH" \
-                                  -e "restore_db_backup=$DB_BACKUP" \
-                                  -e "restore_public_backup=$PUBLIC_BACKUP" \
-                                  -e "restore_private_backup=$PRIVATE_BACKUP"
-                            '''
-                        }
+        
+                        sh '''
+                            set +x
+        
+                            cd ansible
+        
+                            /opt/ansible-venv/bin/ansible-playbook \
+                              -i inventory.ini \
+                              playbooks/${ACTION}.yml \
+                              -e "site_name=$SITE_NAME" \
+                              -e "app_name=$APP_NAME" \
+                              -e "repo_url=$REPO_URL" \
+                              -e "branch=$BRANCH" \
+                              -e "restore_db_backup=$DB_BACKUP" \
+                              -e "restore_public_backup=$PUBLIC_BACKUP" \
+                              -e "restore_private_backup=$PRIVATE_BACKUP"
+                        '''
                     }
                 }
             }
         }
-    }
+
 
     post {
 
