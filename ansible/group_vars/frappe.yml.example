@@ -1,2 +1,11 @@
-mariadb_root_password: CHANGE_ME
+# Non-sensitive variables only
+
 bench_path: /home/frappe-user/frappe-bench
+
+
+# Sensitive variables are stored in:
+# group_vars/frappe/vault.yml
+
+# Example:
+# mariadb_root_password: CHANGE_ME
+# admin_password: CHANGE_ME
