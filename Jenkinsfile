@@ -226,6 +226,7 @@ pipeline {
                 }
             }
         }
+    }
 
 
     post {
@@ -238,5 +239,4 @@ pipeline {
             echo "Operation ${params.ACTION} failed"
         }
     }
-}
 }
