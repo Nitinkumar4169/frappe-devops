@@ -166,6 +166,10 @@ pipeline {
                     ) {
         
                         withCredentials([
+                             string(
+                                credentialsId: 'sudo-pass',
+                                variable: 'SUDO_PASS'
+                            ),
                             string(
                                 credentialsId: 'ansible-vault-password',
                                 variable: 'VAULT_PASSWORD'
@@ -188,6 +192,8 @@ pipeline {
                                   -e "site_name=$SITE_NAME" \
                                   -e "app_name=$APP_NAME" \
                                   -e "repo_url=$REPO_URL" \
+                                  -e "git_user=$GIT_USER" \
+                                  -e "git_token=$GIT_TOKEN" \
                                   -e "branch=$BRANCH" \
                                   -e "restore_db_backup=$DB_BACKUP" \
                                   -e "restore_public_backup=$PUBLIC_BACKUP" \
