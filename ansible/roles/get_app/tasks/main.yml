@@ -24,52 +24,30 @@
   debug:
     msg: "Checking app {{ app_name }}"
 
-<<<<<<< HEAD
+# ==================================================
+# Download App
+# ==================================================
+
 - name: Download App from Repository
   command:
     cmd: >
+      timeout 900
       bench get-app
-      https://{{ git_user }}:{{ git_token }}@{{ repo_url | regex_replace('https://', '') }}
+      https://{{ git_user }}:{{ git_token }}@{{ repo_url | regex_replace('^https://', '') }}
       {% if branch is defined and branch | length > 0 %}
       --branch {{ branch }}
       {% endif %}
     chdir: "{{ bench_path }}"
   register: get_app_result
   when: not app_check.stat.exists
-=======
-# ==================================================
-# Download App
-# ==================================================
->>>>>>> ca35b9b (Integrate Ansible Vault and update Jenkins Ansible environment)
+  no_log: true
 
-- block:
-
-    - name: Download app
-      command:
-        cmd: >
-          timeout 900
-          bench get-app
-          {% if branch is defined and branch | length > 0 %}
-          --branch {{ branch }}
-          {% endif %}
-          {{ app_name }}
-          {{ repo_url }}
-        chdir: "{{ bench_path }}"
-      register: get_app_result
-      when: not app_check.stat.exists
-
-    - name: Show download output
-      debug:
-        var: get_app_result.stdout_lines
-      when:
-        - get_app_result is defined
-        - not app_check.stat.exists
-
-  rescue:
-
-    - name: Download failed
-      fail:
-        msg: "Failed to download {{ app_name }}"
+- name: Show download output
+  debug:
+    var: get_app_result.stdout_lines
+  when:
+    - get_app_result is defined
+    - not app_check.stat.exists
 
 # ==================================================
 # Verify
