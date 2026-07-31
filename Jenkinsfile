@@ -189,6 +189,7 @@ pipeline {
                                   -i inventory.ini \
                                   playbooks/${ACTION}.yml \
                                   --vault-password-file=vault_password.txt \
+                                  --extra-vars "ansible_become=true ansible_become_method=sudo ansible_become_password=$SUDO_PASS" \
                                   -e "site_name=$SITE_NAME" \
                                   -e "app_name=$APP_NAME" \
                                   -e "repo_url=$REPO_URL" \
