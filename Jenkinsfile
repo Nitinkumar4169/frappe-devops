@@ -18,6 +18,7 @@ pipeline {
                 'create_site',
                 'get_app',
                 'install_app',
+                'update_app',
                 'backup',
                 'restore_site',
                 'migrate_site',
@@ -96,10 +97,10 @@ pipeline {
         stage('Run Ansible') {
             steps {
                 script {
-        
+
                     /*
                      * ============================================================
-                     * GET APP
+                     * GET APP / UPDATE APP
                      *
                      * Requires:
                      *   - sudo password
@@ -109,9 +110,9 @@ pipeline {
                      *   - Vault password
                      * ============================================================
                      */
-        
-                    if (params.ACTION == 'get_app') {
-        
+
+                    if (params.ACTION == 'get_app' || params.ACTION == 'update_app') {
+
                         withCredentials([
                             string(
                                 credentialsId: 'sudo-pass',
@@ -123,12 +124,12 @@ pipeline {
                                 passwordVariable: 'GIT_TOKEN'
                             )
                         ]) {
-        
+
                             sh '''
                                 set +x
-        
+
                                 cd ansible
-        
+
                                 /opt/ansible-venv/bin/ansible-playbook \
                                   -i inventory.ini \
                                   playbooks/${ACTION}.yml \
@@ -144,8 +145,8 @@ pipeline {
                                   -e "restore_private_backup=$PRIVATE_BACKUP"
                             '''
                         }
-        
-        
+
+
                     /*
                      * ============================================================
                      * CREATE SITE / RESTORE SITE / DROP SITE
@@ -158,13 +159,13 @@ pipeline {
                      *   - sudo password
                      * ============================================================
                      */
-        
+
                     } else if (
                         params.ACTION == 'create_site' ||
                         params.ACTION == 'restore_site' ||
                         params.ACTION == 'drop_site'
                     ) {
-        
+
                         withCredentials([
                              string(
                                 credentialsId: 'sudo-pass',
@@ -175,16 +176,16 @@ pipeline {
                                 variable: 'VAULT_PASSWORD'
                             )
                         ]) {
-        
+
                             sh '''
                                 set +x
-        
+
                                 cd ansible
-        
+
                                 printf '%s' "$VAULT_PASSWORD" > vault_password.txt
-        
+
                                 trap 'rm -f vault_password.txt' EXIT
-        
+
                                 /opt/ansible-venv/bin/ansible-playbook \
                                   -i inventory.ini \
                                   playbooks/${ACTION}.yml \
@@ -201,8 +202,8 @@ pipeline {
                                   -e "restore_private_backup=$PRIVATE_BACKUP"
                             '''
                         }
-        
-        
+
+
                     /*
                      * ============================================================
                      * HEALTH CHECK / INSTALL APP / BACKUP / MIGRATE
@@ -210,14 +211,14 @@ pipeline {
                      * NO CREDENTIALS
                      * ============================================================
                      */
-        
+
                     } else {
-        
+
                         sh '''
                             set +x
-        
+
                             cd ansible
-        
+
                             /opt/ansible-venv/bin/ansible-playbook \
                               -i inventory.ini \
                               playbooks/${ACTION}.yml \

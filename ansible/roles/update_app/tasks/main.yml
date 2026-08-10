@@ -1,0 +1,109 @@
+---
+# ==================================================
+# Validate Variables
+# ==================================================
+- name: Validate required variables
+  fail:
+    msg: "app_name is required"
+  when: app_name is not defined or app_name | length == 0
+
+# ==================================================
+# Check App Exists
+# ==================================================
+- name: Check if app exists in bench
+  stat:
+    path: "{{ bench_path }}/apps/{{ app_name }}"
+  register: app_check
+
+- name: Fail if app not found
+  fail:
+    msg: "App {{ app_name }} not found in {{ bench_path }}/apps. Run get_app first."
+  when: not app_check.stat.exists
+
+# ==================================================
+# Set Authenticated Remote (if repo_url given)
+# ==================================================
+- name: Set authenticated git remote
+  command:
+    cmd: >
+      git remote set-url origin
+      https://{{ git_user }}:{{ git_token }}@{{ repo_url | regex_replace('^https://', '') }}
+    chdir: "{{ bench_path }}/apps/{{ app_name }}"
+  when:
+    - repo_url is defined
+    - repo_url | length > 0
+  #no_log: true
+
+# ==================================================
+# Checkout Branch (optional)
+# ==================================================
+- name: Checkout specified branch
+  command:
+    cmd: "git checkout {{ branch }}"
+    chdir: "{{ bench_path }}/apps/{{ app_name }}"
+  when: branch is defined and branch | length > 0
+
+# ==================================================
+# Pull Latest Code
+# ==================================================
+- name: Git pull latest changes
+  command:
+    cmd: "git pull"
+    chdir: "{{ bench_path }}/apps/{{ app_name }}"
+  register: pull_result
+
+- name: Show pull output
+  debug:
+    var: pull_result.stdout_lines
+
+# ==================================================
+# Build Assets
+# ==================================================
+- name: Run bench build
+  command:
+    cmd: "bench build --app {{ app_name }}"
+    chdir: "{{ bench_path }}"
+  register: build_result
+
+- name: Show build output
+  debug:
+    var: build_result.stdout_lines
+
+# ==================================================
+# Migrate
+# ==================================================
+- name: Run migration on specific site
+  command:
+    cmd: "bench --site {{ site_name }} migrate"
+    chdir: "{{ bench_path }}"
+  when: site_name is defined and site_name | length > 0
+  register: migrate_result
+
+- name: Show migrate output
+  debug:
+    var: migrate_result.stdout_lines
+  when: migrate_result is defined
+
+# ==================================================
+# Restart Bench
+# ==================================================
+- name: Restart bench
+  command:
+    cmd: "bench restart"
+    chdir: "{{ bench_path }}"
+
+# ==================================================
+# Clear Cache
+# ==================================================
+- name: Clear cache
+  command:
+    cmd: "bench --site {{ site_name }} clear-cache"
+    chdir: "{{ bench_path }}"
+  when: site_name is defined and site_name | length > 0
+
+# ==================================================
+# Success
+# ==================================================
+- name: App updated successfully
+  debug:
+    msg: "App {{ app_name }} updated, built, migrated, and cache cleared successfully"

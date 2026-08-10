@@ -1,0 +1,5 @@
+---
+- hosts: frappe
+  become: no
+  roles:
+    - update_app
