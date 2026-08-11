@@ -21,18 +21,30 @@
   when: not app_check.stat.exists
 
 # ==================================================
-# Set Authenticated Remote (if repo_url given)
+# Get Existing Git Remote
 # ==================================================
+
+- name: Get configured git remotes
+  command:
+    cmd: git remote
+    chdir: "{{ bench_path }}/apps/{{ app_name }}"
+  register: git_remotes
+  changed_when: false
+
+- name: Fail if no git remote is configured
+  fail:
+    msg: "No git remote configured for {{ app_name }}"
+  when: git_remotes.stdout_lines | length == 0
+
 - name: Set authenticated git remote
   command:
     cmd: >
-      git remote set-url origin
+      git remote set-url {{ git_remotes.stdout_lines[0] }}
       https://{{ git_user }}:{{ git_token }}@{{ repo_url | regex_replace('^https://', '') }}
     chdir: "{{ bench_path }}/apps/{{ app_name }}"
   when:
     - repo_url is defined
     - repo_url | length > 0
-  #no_log: true
 
 # ==================================================
 # Checkout Branch (optional)
