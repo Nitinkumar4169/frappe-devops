@@ -19,7 +19,7 @@
       bench setup nginx --yes
     chdir: "{{ bench_path }}"
   when: not site_check.stat.exists
-  
+
 - name: Wait before nginx reload
   pause:
     seconds: 5
@@ -29,9 +29,21 @@
   systemd:
     name: nginx
     state: reloaded
-  
+
+- name: Setup Let's Encrypt SSL
+  become: true
+  command:
+    cmd: bench setup lets-encrypt {{ site_name }} --non-interactive
+    chdir: "{{ bench_path }}"
+  when:
+    - not site_check.stat.exists
+    - enable_ssl | default(false) | bool
+  register: letsencrypt_result
+  changed_when: "'Certificate' in letsencrypt_result.stdout or letsencrypt_result.rc == 0"
+
 - name: Success Message
   debug:
     msg:
       - "Site created successfully"
       - "Site Name : {{ site_name }}"
+      - "SSL Enabled : {{ enable_ssl | default(false) }}"
